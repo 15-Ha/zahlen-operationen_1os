@@ -538,8 +538,13 @@ function ensureProtoOverlay(){var ov=document.getElementById('protoOverlay');if(
 function showProtocol(d){var ov=ensureProtoOverlay();var pct=d.total?Math.round(d.correct/d.total*100):0;var a=protoAssess(pct);var date=new Date().toLocaleDateString('de-CH');var missList=(d.misses&&d.misses.length)?('<h3>Fehler im Detail ('+d.misses.length+')</h3><div class="proto-miss">'+d.misses.join('')+'</div>'):'<p class="proto-none">Keine Fehler in dieser Serie – alle Aufgaben richtig gelöst.</p>';document.getElementById('protoBody').innerHTML='<div class="proto-head"><div><div class="proto-eyebrow">Protokoll · '+protoEsc(d.app)+'</div><h2>'+protoEsc(d.tool)+'</h2></div><div class="proto-badge" style="color:'+a[1]+';background:'+a[2]+'">'+a[0]+'</div></div><div class="proto-meta"><span>Name: <span class="proto-line"></span></span><span>Datum: '+date+'</span></div><div class="proto-kpis"><div class="kpi"><div class="kpi-n">'+d.total+'</div><div class="kpi-l">Aufgaben</div></div><div class="kpi"><div class="kpi-n" style="color:#1E7454">'+d.correct+'</div><div class="kpi-l">richtig</div></div><div class="kpi"><div class="kpi-n" style="color:#C0392B">'+d.wrong+'</div><div class="kpi-l">falsch</div></div><div class="kpi"><div class="kpi-n">'+pct+' %</div><div class="kpi-l">Erfolgsquote</div></div>'+(d.maxStreak?'<div class="kpi"><div class="kpi-n">'+d.maxStreak+'</div><div class="kpi-l">längste Serie</div></div>':'')+'</div>'+protoDiffTable(d.byDiff)+'<div class="proto-assess"><b>Einschätzung:</b> '+protoAssessText(pct,d.byDiff)+'</div>'+missList;ov.hidden=false;ov.scrollTop=0;}
 
 function mountPractice(panel,gen,opts){
-  opts=opts||{};let diff=1,sel=opts.selector?opts.selector.options[0].v:undefined,cur=null,locked=false,stats={ok:0,wrong:0,streak:0},mistakes=[],maxStreak=0,agg=newDiffAgg(),lastSig='';
-  const selCtrl=opts.selector?('<span class="gen-note" style="margin-left:auto">'+(opts.selector.label||'Auswahl')+':</span><span class="pill-diff p-sel">'+opts.selector.options.map((o,i)=>'<button data-v="'+o.v+'" class="'+(i===0?'active':'')+'">'+o.label+'</button>').join('')+'</span>'):'';
+  opts=opts||{};
+  const selMulti=!!(opts.selector&&opts.selector.multi);   /* mehrere Auswahlen gleichzeitig moeglich */
+  let diff=1,sel=opts.selector?(selMulti?opts.selector.options.map(o=>o.v):opts.selector.options[0].v):undefined,cur=null,locked=false,stats={ok:0,wrong:0,streak:0},mistakes=[],maxStreak=0,agg=newDiffAgg(),lastSig='';
+  const selCtrl=opts.selector?('<span class="gen-note" style="margin-left:auto">'+(opts.selector.label||'Auswahl')+':</span><span class="pill-diff p-sel'+(selMulti?' p-sel-multi':'')+'">'+
+    (selMulti?'<button data-v="__all" class="active" title="Alle Operationen">'+(opts.selector.all||'Alle')+'</button>':'')+
+    opts.selector.options.map((o,i)=>'<button data-v="'+o.v+'" class="'+((selMulti||i===0)?'active':'')+'"'+(selMulti?' aria-pressed="true"':'')+'>'+o.label+'</button>').join('')+'</span>'+
+    (selMulti?'<span class="gen-note sel-hint">mehrere möglich</span>':'')):'';
   panel.innerHTML=
    '<div class="sheet">'+
     '<div class="sheet-head">'+
@@ -556,7 +561,22 @@ function mountPractice(panel,gen,opts){
    '<details class="misslog p-miss" hidden><summary>Gemachte Fehler (<span class="p-mc">0</span>)</summary><div class="p-mlist"></div></details>';
   const q=s=>panel.querySelector(s);
   const fbEl=q('.p-fb');
-  if(opts.selector){q('.p-sel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;sel=b.dataset.v;$$('.p-sel button',panel).forEach(x=>x.classList.toggle('active',x===b));next();});}
+  if(opts.selector){q('.p-sel').addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    if(!selMulti){sel=b.dataset.v;$$('.p-sel button',panel).forEach(x=>x.classList.toggle('active',x===b));next();return;}
+    const ops=$$('.p-sel button',panel).filter(x=>x.dataset.v!=='__all');
+    if(b.dataset.v==='__all'){ops.forEach(x=>x.classList.add('active'));}
+    else{
+      const on=ops.filter(x=>x.classList.contains('active'));
+      if(b.classList.contains('active')&&on.length<=1)return;   /* mindestens eine Operation bleibt aktiv */
+      b.classList.toggle('active');
+    }
+    sel=ops.filter(x=>x.classList.contains('active')).map(x=>x.dataset.v);
+    ops.forEach(x=>x.setAttribute('aria-pressed',x.classList.contains('active')?'true':'false'));
+    const allB=panel.querySelector('.p-sel button[data-v="__all"]');
+    if(allB)allB.classList.toggle('active',sel.length===ops.length);
+    next();
+  });}
   q('.p-diff').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;diff=+b.dataset.d;$$('.p-diff button',panel).forEach(x=>x.classList.toggle('active',x===b));next();});
   q('.p-eval').addEventListener('click',()=>{const tot=stats.ok+stats.wrong;if(!tot){q('.p-prog').textContent='Bitte zuerst Aufgaben lösen.';return;}showProtocol({app:'Zahlen und Operationen',tool:(opts.title||'Übung'),total:tot,correct:stats.ok,wrong:stats.wrong,maxStreak:maxStreak,byDiff:agg,misses:mistakes});});
   q('.p-reset').addEventListener('click',()=>{stats={ok:0,wrong:0,streak:0};mistakes=[];maxStreak=0;agg=newDiffAgg();q('.p-ok').textContent='0';q('.p-no').textContent='0';q('.p-streak').textContent='Serie: 0 🔥';q('.p-mlist').innerHTML='';q('.p-mc').textContent='0';q('.p-miss').hidden=true;q('.p-prog').textContent='Noch keine Aufgabe in dieser Serie.';next();});
@@ -622,7 +642,7 @@ function mountPractice(panel,gen,opts){
 
 /* ============ Arbeitsblatt-Generator (Formular) ============ */
 function mountGenerator(panel,topic){
-  const modesHTML=topic.modes?('<label style="margin-top:10px">Aufgabentyp</label><div class="checks gmode">'+topic.modes.map((m,i)=>'<label><input type="radio" name="mode-'+topic.key+'" value="'+m.v+'" '+(i===0?'checked':'')+'> '+m.t+'</label>').join('')+'</div>'):'';
+  const modesHTML=topic.modes?('<label style="margin-top:10px">'+(topic.modesLabel||'Aufgabentyp')+'</label><div class="checks gmode">'+topic.modes.map((m,i)=>'<label><input type="'+(topic.modesMulti?'checkbox':'radio')+'" name="mode-'+topic.key+'" value="'+m.v+'" '+((topic.modesMulti||i===0)?'checked':'')+'> '+m.t+'</label>').join('')+'</div>'):'';
   panel.innerHTML=
    '<div class="sheet">'+
     '<div class="eyebrow">Arbeitsblatt «'+topic.nav+'»</div>'+
@@ -640,7 +660,8 @@ function mountGenerator(panel,topic){
   panel.querySelector('.gmake').addEventListener('click',()=>{
     const n=Math.max(topic.min,Math.min(topic.max,+panel.querySelector('.gcount').value||8));
     const serie=panel.querySelector('.gserie').value.trim();
-    const mode=topic.modes?(panel.querySelector('.gmode input:checked')||{}).value:null;
+    let mode=topic.modes?(topic.modesMulti?$$('.gmode input:checked',panel).map(x=>x.value):(panel.querySelector('.gmode input:checked')||{}).value):null;
+    if(topic.modesMulti&&(!mode||!mode.length))mode=topic.modes.map(m=>m.v);   /* nichts angekreuzt = alle */
     const gen=topic.genFor?topic.genFor(mode):topic.gen;
     const tasks=distinctTasks(()=>gen(diff),n,t=>String(t.pdfQ||t.promptHTML||'')+'|'+(t._kind||'')+(t._num||'')+(t._den||'')+(t._val||'')
       +'|'+String(t.pdfSol||t.answerText||'').replace(/^[A-Z]\s*[-\u2013]\s*/,''));
@@ -949,7 +970,9 @@ function genBruch(diff,op){
   //  mittel  = ein Nenner ist Vielfaches des anderen bzw. Kürzen nötig
   //  schwer  = teilerfremde Nenner (kgV nötig), unechte Brüche/gemischte Zahlen
   const OPS={add:'+',sub:'−',mul:'·',div:':'};
-  const sym=(op&&OPS[op])?OPS[op]:pick(['+','−','·',':']);
+  /* op kann ein einzelner Schluessel, eine Liste von Schluesseln oder leer (= alle) sein */
+  const ops=(Array.isArray(op)?op:[op]).filter(function(x){return OPS[x];});
+  const sym=ops.length?OPS[pick(ops)]:pick(['+','−','·',':']);
   let a,b,c,d,rn,rd,steps;
   if(diff===3&&(sym==='+'||sym==='−')&&Math.random()<0.35){
     /* gemischte Zahlen: zuerst in unechte Brueche umwandeln */
@@ -2279,10 +2302,11 @@ const TOPICS=[
   lead:'«von» bedeutet «mal»: Bruchteile von Zahlen, von Grössen und von anderen Brüchen berechnen – auch mit Prozenten.',
   gen:genVon,pdf:listPdfFrac('Anteile berechnen mit «von»','Berechne. «von» bedeutet «mal» (·).',META1),min:4,max:24,def:10},
  {key:'bruchrechnen',group:G1,nav:'Mit Brüchen rechnen',title:'Mit Brüchen rechnen',
-  lead:'Wähle die Operation – Addition, Subtraktion, Multiplikation, Division oder vermischt. Ab Stufe «mittel» kommen ganze Zahlen dazu, ab «schwer» auch gemischte Zahlen. Das Ergebnis wird immer gekürzt.',
-  gen:(diff,sel)=>genBruch(diff,sel||'mix'),
-  selector:{label:'Operation',options:[{v:'mix',label:'Alle'},{v:'add',label:'+'},{v:'sub',label:'−'},{v:'mul',label:'·'},{v:'div',label:':'}]},
-  modes:[{v:'mix',t:'Vermischt (alle Operationen)'},{v:'add',t:'Addition (+)'},{v:'sub',t:'Subtraktion (−)'},{v:'mul',t:'Multiplikation (·)'},{v:'div',t:'Division (:)'}],
+  lead:'Wähle aus, welche Operationen du üben willst – du kannst auch mehrere gleichzeitig anwählen, z. B. nur + und −. Ab Stufe «mittel» kommen ganze Zahlen dazu, ab «schwer» auch gemischte Zahlen. Das Ergebnis wird immer gekürzt.',
+  gen:(diff,sel)=>genBruch(diff,sel),
+  selector:{label:'Operationen',multi:true,all:'Alle',options:[{v:'add',label:'+'},{v:'sub',label:'−'},{v:'mul',label:'·'},{v:'div',label:':'}]},
+  modes:[{v:'add',t:'Addition (+)'},{v:'sub',t:'Subtraktion (−)'},{v:'mul',t:'Multiplikation (·)'},{v:'div',t:'Division (:)'}],
+  modesMulti:true,modesLabel:'Operationen (mehrere möglich)',
   genFor:mode=>(diff)=>genBruch(diff,mode),
   pdf:listPdfFrac('Mit Brüchen rechnen','Berechne und kürze das Ergebnis so weit wie möglich. Bei unechten Brüchen darfst du auch eine gemischte Zahl angeben.',META1),
   min:4,max:24,def:10},
