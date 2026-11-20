@@ -757,6 +757,31 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ordn-check{margin-top:2px}
   .ordn-slot.correct{border-style:solid;border-color:var(--mint)}
   .ordn-slot.wrong{border-style:solid;border-color:var(--red)}
+  .lz-list li{margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+  .lz-list li label{display:flex;align-items:flex-start;gap:8px;flex:1 1 320px}
+  .lz-links{display:flex;flex-wrap:wrap;gap:6px}
+  .lz-link{display:inline-flex;align-items:center;gap:5px}
+  .lz-tag{font-size:11.5px;color:var(--ink-soft)}
+  .lz-go{font:inherit;font-size:12.5px;border:1px solid var(--line-2);background:#fff;color:#1E7454;border-radius:999px;padding:3px 10px;cursor:pointer}
+  .lz-go:hover{background:var(--mint-soft)}
+  .lz-lk{margin-top:4px}
+  .lnk-inline{font:inherit;background:none;border:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0}
+  .nav-row{display:flex;align-items:stretch;gap:2px;margin-top:10px}
+  .nav-label-btn{all:unset;display:block;flex:1;min-width:0;box-sizing:border-box;font-family:var(--serif);
+    font-size:16px;font-weight:700;letter-spacing:0;text-transform:none;
+    color:var(--ink);padding:8px 10px;cursor:pointer;border-radius:8px;border-left:3px solid transparent}
+  .nav-label-btn:hover{color:var(--brand);background:var(--mint-soft)}
+  .nav-label-btn.active{color:var(--brand);border-left-color:var(--brand)}
+  .nav-chevron{all:unset;flex:none;width:30px;display:inline-flex;align-items:center;justify-content:center;
+    cursor:pointer;border-radius:8px;color:var(--ink-soft);font-size:10px;transition:transform .15s,background .15s}
+  .nav-chevron:hover{background:var(--mint-soft)}
+  .nav-chevron.open{transform:rotate(90deg)}
+  .nav-sub{display:none}
+  .nav-sub.open{display:block}
+  .navbtn-sub{font-size:12.5px;font-weight:400;color:var(--ink-soft);padding:7px 12px 7px 22px}
+  .navbtn-sub .ico{font-size:13px;width:18px;opacity:.6}
+  .navbtn-sub.active{background:var(--mint-soft);color:var(--brand)}
+  .navbtn-sub.active .ico{opacity:.9}
 </style>
 </head>
 <body>
@@ -1336,9 +1361,9 @@ function aggRecord(agg,diff,ok){if(!agg[diff])agg[diff]={ok:0,n:0};agg[diff].n++
 function setProg(id,n){var e=document.getElementById(id);if(e)e.textContent=n?('Aufgaben in dieser Serie: '+n):'Noch keine Aufgabe in dieser Serie.';}
 function serieBarHTML(pfx){return '<div class="serie-bar"><span class="gen-note" id="'+pfx+'-prog">Noch keine Aufgabe in dieser Serie.</span><button class="btn btn-ghost" id="'+pfx+'-reset">Neue Serie</button><button class="btn btn-primary" id="'+pfx+'-eval">Serie auswerten</button></div>';}
 function protoBar(p){return '<span class="pbar"><span class="pbar-fill" style="width:'+p+'%;background:'+(p>=70?'#2f9e5f':(p>=50?'#e6a23c':'#d5473e'))+'"></span></span>';}
-function protoDiffTable(byDiff){if(!byDiff)return '';var labs={1:'leicht (Basis)',2:'mittel',3:'schwer'},rows='',any=false;[1,2,3].forEach(function(d){var o=byDiff[d];if(o&&o.n){any=true;var p=Math.round(o.ok/o.n*100);rows+='<tr><td>'+labs[d]+'</td><td>'+o.ok+' / '+o.n+'</td><td>'+p+' %</td><td>'+protoBar(p)+'</td></tr>';}});return any?('<h3>Nach Schwierigkeit</h3><table class="proto-tbl"><thead><tr><th>Stufe</th><th>Richtig</th><th>Quote</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'):'';}
+function protoDiffTable(byDiff){if(!byDiff)return '';var labs={1:'Grundanforderungen',2:'Erweitert',3:'Anspruchsvoll'},rows='',any=false;[1,2,3].forEach(function(d){var o=byDiff[d];if(o&&o.n){any=true;var p=Math.round(o.ok/o.n*100);rows+='<tr><td>'+labs[d]+'</td><td>'+o.ok+' / '+o.n+'</td><td>'+p+' %</td><td>'+protoBar(p)+'</td></tr>';}});return any?('<h3>Nach Schwierigkeit</h3><table class="proto-tbl"><thead><tr><th>Stufe</th><th>Richtig</th><th>Quote</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'):'';}
 function protoAssess(pct){if(pct>=90)return['sicher beherrscht','#1f7a45','#e9f7ef'];if(pct>=70)return['grösstenteils sicher','#846516','#f6efd8'];if(pct>=50)return['noch unsicher','#a9631b','#fbeede'];return['noch nicht sicher','#b23c30','#fdeeec'];}
-function protoAssessText(pct,byDiff){var base;if(pct>=90)base='Das Thema wird sicher beherrscht.';else if(pct>=70)base='Das Thema ist grösstenteils sicher; einzelne Fehler sollten noch angeschaut werden.';else if(pct>=50)base='Die Grundlagen sind vorhanden, das Thema ist aber noch unsicher – weiter üben.';else base='Das Thema ist noch nicht sicher – die Grundlagen sollten wiederholt werden.';var weak='';if(byDiff){var worst=null,labs={1:'leicht',2:'mittel',3:'schwer'};[1,2,3].forEach(function(dn){var o=byDiff[dn];if(o&&o.n>=2){var p=o.ok/o.n;if(worst===null||p<worst.p)worst={d:dn,p:p};}});if(worst&&worst.p<0.7)weak=' Besondere Schwierigkeiten zeigen sich bei den Aufgaben der Stufe «'+labs[worst.d]+'».';}return base+weak;}
+function protoAssessText(pct,byDiff){var base;if(pct>=90)base='Das Thema wird sicher beherrscht.';else if(pct>=70)base='Das Thema ist grösstenteils sicher; einzelne Fehler sollten noch angeschaut werden.';else if(pct>=50)base='Die Grundlagen sind vorhanden, das Thema ist aber noch unsicher – weiter üben.';else base='Das Thema ist noch nicht sicher – die Grundlagen sollten wiederholt werden.';var weak='';if(byDiff){var worst=null,labs={1:'Grundanforderungen',2:'Erweitert',3:'Anspruchsvoll'};[1,2,3].forEach(function(dn){var o=byDiff[dn];if(o&&o.n>=2){var p=o.ok/o.n;if(worst===null||p<worst.p)worst={d:dn,p:p};}});if(worst&&worst.p<0.7)weak=' Besondere Schwierigkeiten zeigen sich bei den Aufgaben der Stufe «'+labs[worst.d]+'».';}return base+weak;}
 function ensureProtoOverlay(){var ov=document.getElementById('protoOverlay');if(ov)return ov;ov=document.createElement('div');ov.className='proto-overlay';ov.id='protoOverlay';ov.hidden=true;ov.innerHTML='<div class="proto-card"><div class="proto-actions no-print"><button class="btn btn-primary" id="protoPrint">Drucken / als PDF speichern</button><button class="btn btn-ghost" id="protoClose">Schliessen</button></div><div id="protoBody"></div></div>';document.body.appendChild(ov);ov.querySelector('#protoPrint').addEventListener('click',function(){window.print();});ov.querySelector('#protoClose').addEventListener('click',function(){ov.hidden=true;});ov.addEventListener('click',function(e){if(e.target===ov)ov.hidden=true;});return ov;}
 function showProtocol(d){try{if(window.LVHOOK)window.LVHOOK.serie(String(d.tool||"uebung"),String(d.tool||""),d.correct|0,d.total|0);}catch(_e){}var ov=ensureProtoOverlay();var pct=d.total?Math.round(d.correct/d.total*100):0;var a=protoAssess(pct);var date=new Date().toLocaleDateString('de-CH');var missList=(d.misses&&d.misses.length)?('<h3>Fehler im Detail ('+d.misses.length+')</h3><div class="proto-miss">'+d.misses.join('')+'</div>'):'<p class="proto-none">Keine Fehler in dieser Serie – alle Aufgaben richtig gelöst.</p>';document.getElementById('protoBody').innerHTML='<div class="proto-head"><div><div class="proto-eyebrow">Protokoll · '+protoEsc(d.app)+'</div><h2>'+protoEsc(d.tool)+'</h2></div><div class="proto-badge" style="color:'+a[1]+';background:'+a[2]+'">'+a[0]+'</div></div><div class="proto-meta"><span>Name: <span class="proto-line"></span></span><span>Datum: '+date+'</span></div><div class="proto-kpis"><div class="kpi"><div class="kpi-n">'+d.total+'</div><div class="kpi-l">Aufgaben</div></div><div class="kpi"><div class="kpi-n" style="color:#1E7454">'+d.correct+'</div><div class="kpi-l">richtig</div></div><div class="kpi"><div class="kpi-n" style="color:#C0392B">'+d.wrong+'</div><div class="kpi-l">falsch</div></div><div class="kpi"><div class="kpi-n">'+pct+' %</div><div class="kpi-l">Erfolgsquote</div></div>'+(d.maxStreak?'<div class="kpi"><div class="kpi-n">'+d.maxStreak+'</div><div class="kpi-l">längste Serie</div></div>':'')+'</div>'+protoDiffTable(d.byDiff)+'<div class="proto-assess"><b>Einschätzung:</b> '+protoAssessText(pct,d.byDiff)+'</div>'+missList;ov.hidden=false;ov.scrollTop=0;}
 
@@ -1354,7 +1379,7 @@ function mountPractice(panel,gen,opts){
    '<div class="sheet">'+
     '<div class="sheet-head">'+
       '<div class="scoreline"><span>Richtig: <b class="p-ok">0</b></span><span>Falsch: <b class="p-no">0</b></span><span class="streak p-streak">Serie: 0 🔥</span></div>'+
-      '<div class="p-controls" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+selCtrl+'<span class="pill-diff p-diff"><button data-d="1" class="active">leicht</button><button data-d="2">mittel</button><button data-d="3">schwer</button></span></div>'+
+      '<div class="p-controls" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+selCtrl+'<span class="pill-diff p-diff"><button data-d="1" class="active">Grundanforderungen</button><button data-d="2">Erweitert</button><button data-d="3">Anspruchsvoll</button></span></div>'+
     '</div>'+
     '<p class="qsub p-sub"></p>'+
     '<div class="stimulus p-stim" style="display:none"></div>'+
@@ -1537,7 +1562,7 @@ function mountGenerator(panel,topic){
     '<div class="form-grid">'+
       '<div class="field"><label>Serie / Bezeichnung</label><input class="opt gserie" value="Serie 1">'+
         '<label style="margin-top:8px">Anzahl Aufgaben</label><input class="opt gcount" type="number" min="'+topic.min+'" max="'+topic.max+'" value="'+(topic.def||Math.min(topic.max,8))+'"></div>'+
-      '<div class="field"><label>Schwierigkeit</label><span class="pill-diff gdiff"><button data-d="1" class="active">leicht</button><button data-d="2">mittel</button><button data-d="3">schwer</button></span>'+
+      '<div class="field"><label>Schwierigkeit</label><span class="pill-diff gdiff"><button data-d="1" class="active">Grundanforderungen</button><button data-d="2">Erweitert</button><button data-d="3">Anspruchsvoll</button></span>'+
         modesHTML+
         '<p class="hint" style="margin-top:10px">Aufgaben und Lösungen im Stil der Grundaufgaben-Arbeitsblätter.</p></div>'+
     '</div>'+
@@ -1558,7 +1583,15 @@ function mountGenerator(panel,topic){
 }
 
 /* ============ Navigation ============ */
-function showView(id){$$('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+id));$$('.navbtn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));$('#sidebar').classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
+function setNavGroup(key,open){
+  $$('.nav-sub').forEach(el=>el.classList.toggle('open',el.dataset.group===key&&open!==false));
+  $$('.nav-chevron').forEach(b=>b.classList.toggle('open',b.dataset.toggle===key&&open!==false));
+}
+function toggleNavGroup(key){const sub=document.querySelector('.nav-sub[data-group="'+key+'"]');setNavGroup(key,!(sub&&sub.classList.contains('open')));}
+function showView(id){$$('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+id));$$('.navbtn,.nav-label-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));
+  if(id==='home'){setNavGroup(null,false);}
+  else{const gk=(id.indexOf('grp-')===0)?id:(typeof TOPIC_GROUP_SLUG!=='undefined'?TOPIC_GROUP_SLUG[id]:undefined);if(gk)setNavGroup(gk,true);}
+  $('#sidebar').classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
 function wireTabs(){$$('.tabs').forEach(tabs=>{tabs.addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;const wrap=tabs.parentElement;$$('.tab',tabs).forEach(t=>t.classList.toggle('active',t===b));$$('.panel',wrap).forEach(p=>p.classList.toggle('active',p.dataset.panel===b.dataset.panel));});});}
 /*SHARED-START*/
 /* ============ 1) BRÜCHE UND VERHÄLTNISSE ============ */
@@ -2522,7 +2555,7 @@ var EXAM_API=(function(){
    zusaetzlich _dragSort:true und _items:[{disp,val},...] – siehe renderOrdn().
 ============================================================================ */
 var LK=(function(){
-  var DL={1:'leicht',2:'mittel',3:'schwer'};
+  var DL={1:'Grundanforderungen',2:'Erweitert',3:'Anspruchsvoll'};
   var ORDNCOL=['#2f6690','#a9431e','#1e7454','#7d4a9e','#b5731b'];
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function plain(h){return String(h||'').replace(/<br\s*\/?>/g,' ').replace(/<sup>/g,'^').replace(/<\/sup>/g,'')
@@ -2677,7 +2710,7 @@ var LK=(function(){
         '<button class="lk-btn lk-gho" data-a="all">Alle</button><button class="lk-btn lk-gho" data-a="none">Keine</button></div>'+
       groupsHTML+
       '<div class="lk-row"><span class="lk-lab">Schwierigkeit:</span><span class="lk-pill lk-diff">'+
-        '<button data-d="1" class="on">leicht</button><button data-d="2">mittel</button><button data-d="3">schwer</button></span>'+
+        '<button data-d="1" class="on">Grundanforderungen</button><button data-d="2">Erweitert</button><button data-d="3">Anspruchsvoll</button></span>'+
         '<span class="lk-lab" style="margin-left:8px">Anzahl Aufgaben:</span>'+
         '<input class="lk-in lk-count" type="number" min="'+cfg.min+'" max="'+cfg.max+'" value="'+cfg.def+'" style="width:84px" aria-label="Anzahl Aufgaben">'+
         '<span class="lk-lab" style="margin-left:8px">Name:</span>'+
@@ -3594,7 +3627,7 @@ const TOPICS=[
   lead:'«von» bedeutet «mal»: Bruchteile von Zahlen, von Grössen und von anderen Brüchen berechnen – auch mit Prozenten.',
   gen:genVon,pdf:listPdfFrac('Anteile berechnen mit «von»','Berechne. «von» bedeutet «mal» (·).',META1),min:4,max:24,def:10},
  {key:'bruchrechnen',group:G1,nav:'Mit Brüchen rechnen',title:'Mit Brüchen rechnen',
-  lead:'Wähle aus, welche Operationen du üben willst – du kannst auch mehrere gleichzeitig anwählen, z. B. nur + und −. Ab Stufe «mittel» kommen ganze Zahlen dazu, ab «schwer» auch gemischte Zahlen. Das Ergebnis wird immer gekürzt.',
+  lead:'Wähle aus, welche Operationen du üben willst – du kannst auch mehrere gleichzeitig anwählen, z. B. nur + und −. Ab Stufe «Erweitert» kommen ganze Zahlen dazu, ab «Anspruchsvoll» auch gemischte Zahlen. Das Ergebnis wird immer gekürzt.',
   gen:(diff,sel)=>genBruch(diff,sel),
   selector:{label:'Operationen',multi:true,all:'Alle',options:[{v:'add',label:'+'},{v:'sub',label:'−'},{v:'mul',label:'·'},{v:'div',label:':'}]},
   modes:[{v:'add',t:'Addition (+)'},{v:'sub',t:'Subtraktion (−)'},{v:'mul',t:'Multiplikation (·)'},{v:'div',t:'Division (:)'}],
@@ -3646,45 +3679,116 @@ const SECTIONS=[
  {g:G1,first:'bruchbasis',desc:'Bruch verstehen, Modelle, Bruch · Dezimal · Prozent, Darstellungen & Grössen, Bruchbilder, erweitern &amp; kürzen, «von»-Anteile, mit Brüchen rechnen, Zahlenstrahl &amp; Ordnen, Dezimalrechnen.'},
  {g:G2,first:'potschreib',desc:'Potenzen, Baumdiagramme, Zehnerpotenzen, Rechengesetze, kgV &amp; ggT.'}
 ];
-/* Lernziele des Kapitels «Brüche und Verhältnisse» (Selbstcheck, wird nicht gespeichert) */
-const LZ1=['Ich verstehe die Begriffe Zähler, Bruchstrich und Nenner.',
- 'Ich erkenne einen Bruch als Division.',
- 'Ich kann Brüche in unterschiedlichen Modellen darstellen (Kreismodell, Flächenmodell, Streckenmodell).',
- 'Ich kenne die wichtigsten Brucharten (echter und unechter Bruch, gemischte Zahl, Dezimalbruch, Dezimalzahl, Prozentzahl) und kann sie ineinander umwandeln.',
- 'Ich kann Anteile berechnen und sie als Bruch, Dezimal- oder Prozentzahl darstellen.',
- 'Ich kann Brüche erweitern und kürzen.',
- 'Ich kann Brüche addieren, subtrahieren, multiplizieren und dividieren.'];
-function lzSheet(){
-  return '<div class="sheet" style="margin-top:18px"><div class="eyebrow">Was muss ich können?</div>'+
-    '<h3 style="font-family:var(--serif);margin:.3em 0 .5em;font-size:22px">Lernziele · '+G1+'</h3>'+
-    '<ul class="lz-list">'+LZ1.map(function(s){return '<li><label><input type="checkbox"><span>'+s+'</span></label></li>';}).join('')+'</ul>'+
-    '<p class="hint" style="margin:12px 0 0">Selbstcheck: Hake ab, was du schon sicher kannst. Die Haken sind nur für dich und werden nicht gespeichert.</p></div>';
+/* Lernziele je Teilthema (Selbstcheck, wird nicht gespeichert) – jedes Lernziel ist mit der
+   passenden Übung verlinkt (Property k = Topic-Keys aus TOPICS) */
+const LZ1=[
+ {t:'Ich verstehe die Begriffe Zähler, Bruchstrich und Nenner und kann einen Bruch als Division lesen.',k:['bruchbasis']},
+ {t:'Ich kann Brüche in unterschiedlichen Modellen darstellen (Kreismodell, Flächenmodell, Streckenmodell, Bruchbild).',k:['modelle','bruchbild']},
+ {t:'Ich kenne die wichtigsten Brucharten (echter/unechter Bruch, gemischte Zahl, Dezimalbruch, Dezimalzahl, Prozentzahl) und kann sie ineinander umwandeln.',k:['darstell','tabelle']},
+ {t:'Ich kann Anteile berechnen und sie als Bruch, Dezimal- oder Prozentzahl darstellen.',k:['vonrechnen']},
+ {t:'Ich kann Brüche erweitern und kürzen.',k:['kuerzen']},
+ {t:'Ich kann Brüche addieren, subtrahieren, multiplizieren und dividieren.',k:['bruchrechnen']},
+ {t:'Ich kann Dezimalzahlen auf dem Zahlenstrahl ablesen, markieren und der Grösse nach ordnen.',k:['zstrahl']},
+ {t:'Ich kann mit Dezimalzahlen addieren, subtrahieren, multiplizieren und dividieren.',k:['dezrechnen']}
+];
+const LZ2=[
+ {t:'Ich kann Potenzen richtig schreiben und Basis sowie Exponent benennen.',k:['potschreib']},
+ {t:'Ich kann den Wert einfacher Potenzen berechnen.',k:['potberech']},
+ {t:'Ich kann mit einem Baumdiagramm die Anzahl Möglichkeiten bestimmen (Zählprinzip).',k:['baum']},
+ {t:'Ich kenne Zehnerpotenzen und kann grosse Zahlen als Vielfaches einer Zehnerpotenz schreiben.',k:['zehner']},
+ {t:'Ich kenne das Kommutativ- und das Assoziativgesetz und kann sie anwenden.',k:['gesetze']},
+ {t:'Ich kann den ggT und das kgV zweier Zahlen bestimmen.',k:['kgvggt']}
+];
+const LZBYGROUP={};LZBYGROUP[G1]=LZ1;LZBYGROUP[G2]=LZ2;
+const GROUP_BLURB={};
+GROUP_BLURB[G1]='Brüche, Dezimalzahlen, Zahlenstrahl & Prozent';
+GROUP_BLURB[G2]='Potenzen, Zehnerpotenzen, Baumdiagramme & ggT/kgV';
+function slug(s){return s.toLowerCase().replace(/[äöüß]/g,function(c){return {'ä':'ae','ö':'oe','ü':'ue','ß':'ss'}[c];}).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
+function grpView(g){return 'grp-'+slug(g);}
+const TOPIC_GROUP_SLUG={};TOPICS.forEach(t=>{TOPIC_GROUP_SLUG[t.key]=grpView(t.group);});
+const TOPIC_PALETTE=['#1E8763','#176E8C','#2E8F74','#3C7A8F','#0F6B52','#2B8F5A'];
+function topicAccent(key){const t=TOPICS.filter(x=>x.key===key)[0];if(!t)return '#1E8763';
+  const sameGroup=TOPICS.filter(x=>x.group===t.group);return TOPIC_PALETTE[sameGroup.indexOf(t)%TOPIC_PALETTE.length];}
+function lzItemHTML(item){
+  const multi=item.k.length>1;
+  const links=item.k.map(function(key){
+    const top=TOPICS.filter(function(x){return x.key===key;})[0];
+    if(!top)return '';
+    const tag=multi?('<span class="lz-tag">'+top.nav+'</span>'):'';
+    return '<span class="lz-link">'+tag+'<button class="lz-go" data-practice="'+key+'">Üben</button></span>';
+  }).join('');
+  return '<li><label><input type="checkbox"><span>'+item.t+'</span></label><div class="lz-links">'+links+'</div></li>';
+}
+function lzSheet(g){
+  const items=LZBYGROUP[g]||[];
+  return '<div class="sheet" style="margin:4px 0 20px"><div class="eyebrow">Was muss ich können?</div>'+
+    '<h3 style="font-family:var(--serif);margin:.3em 0 .5em;font-size:22px">Lernziele · '+g+'</h3>'+
+    '<ul class="lz-list">'+items.map(lzItemHTML).join('')+'</ul>'+
+    '<p class="hint" style="margin:12px 0 0">Hake ab, was du schon kannst.</p></div>';
 }
 function buildHome(){
-  const groups=GROUPS.map(function(g){
-    const cards=TOPICS.filter(function(t){return t.group===g;}).map(function(t){
-      return '<button class="card-topic" data-view="'+t.key+'" style="--accent:#1E8763">'+
-        '<span class="k">'+t.nav+'</span>'+
-        '<span class="d">'+t.lead+'</span>'+
-        '<span class="go" style="color:#1E7454">Öffnen →</span>'+
-      '</button>';
-    }).join('');
-    return '<div class="eyebrow" style="margin:30px 0 12px;color:#1E7454">'+g+'</div><div class="cards">'+cards+'</div>'+(g===G1?lzSheet():'');
+  const groupCards=GROUPS.map(function(g){
+    const n=TOPICS.filter(function(t){return t.group===g;}).length;
+    return '<button class="card-topic" data-view="'+grpView(g)+'" style="--accent:#1E8763">'+
+      '<span class="k">'+g+'</span>'+
+      '<span class="d">'+(GROUP_BLURB[g]||(n+' Übungen'))+'</span>'+
+      '<span class="go" style="color:#1E7454">Öffnen →</span>'+
+    '</button>';
   }).join('');
   return '<section class="view active" id="view-home">'+
     '<div class="hero">'+
       '<div class="eyebrow">Mathematik · Lernlandschaft</div>'+
       '<h2 class="title">Zahlen und <span class="topic-tag">Operationen</span></h2>'+
-      '<p class="lead">Wähle ein Aufgabentool. Übe mit sofortiger Rückmeldung und ausgeschriebenem Lösungsweg – und erzeuge zu jedem Thema ein Arbeitsblatt mit Lösungen als PDF.</p>'+
+      '<p class="lead">Thema wählen, üben mit Lösungsweg, als PDF exportieren. <button class="lnk-inline" data-view="anleitung">So funktioniert\'s →</button></p>'+
     '</div>'+
-    groups+
-    '<div class="eyebrow" style="margin:30px 0 12px;color:#8a5d12">Lernkontrolle</div><div class="cards">'+
-      '<button class="card-topic" data-view="lernkontrolle" style="--accent:#B0781B"><span class="k">Lernkontrolle</span>'+
-      '<span class="d">Themen und Anzahl Aufgaben wählen – online lösen mit Auswertung oder mit Lösungsblatt ausdrucken.</span>'+
+    '<div class="eyebrow" style="margin:24px 0 12px;color:#8a5d12">Lernkontrolle</div><div class="cards">'+
+      '<button class="card-topic" data-view="lernkontrolle" data-lkscope="ALL" style="--accent:#B0781B"><span class="k">Lernkontrolle</span>'+
+      '<span class="d">Alle Themen zusammen – online oder als PDF.</span>'+
       '<span class="go" style="color:#8a5d12">Öffnen →</span></button></div>'+
-    '<div class="sheet" style="margin-top:30px"><div class="eyebrow">So funktioniert\'s</div>'+
-      '<h3 style="font-family:var(--serif);margin:.3em 0 .2em;font-size:22px">Üben &amp; Arbeitsblätter erstellen</h3>'+
-      '<p style="color:var(--ink-soft);margin:0;max-width:70ch">Jedes Aufgabentool hat zwei Reiter. Unter <b>Üben</b> bekommst du beliebig viele Aufgaben mit sofortiger Kontrolle samt Lösungsweg. Unter <b>Arbeitsblatt erstellen</b> wählst du Anzahl und Schwierigkeit – und lädst ein druckfertiges PDF mit separaten Lösungen herunter.</p></div>'+
+    '<div class="eyebrow" style="margin:24px 0 12px;color:#1E7454">Themen</div><div class="cards">'+groupCards+'</div>'+
+  '</section>';
+}
+function buildGroupView(g){
+  const cards=TOPICS.filter(function(t){return t.group===g;}).map(function(t){
+    return '<button class="card-topic" data-view="'+t.key+'" style="--accent:'+topicAccent(t.key)+'">'+
+      '<span class="k">'+t.nav+'</span>'+
+      '<span class="d">'+t.lead+'</span>'+
+      '<span class="go" style="color:#1E7454">Öffnen →</span>'+
+    '</button>';
+  }).join('');
+  const keys=(LZBYGROUP[g]||[]).reduce(function(a,it){return a.concat(it.k);},[]);
+  return '<section class="view" id="view-'+grpView(g)+'">'+
+    '<div class="eyebrow">Mathematik <span class="topic-tag">«Zahlen und Operationen»</span></div>'+
+    '<h2 class="title">'+g+'</h2>'+
+    '<p class="lead">Lernstand prüfen, Lernziele im Blick, Übungen starten.</p>'+
+    '<div class="cards" style="margin-bottom:26px">'+
+      '<button class="card-topic" data-view="lernkontrolle" data-lkscope="'+keys.join(',')+'" style="--accent:#B0781B"><span class="k">Lernstandsüberprüfung</span>'+
+      '<span class="d">Vor dem Üben: zeigt, was du schon kannst.</span>'+
+      '<span class="go" style="color:#8a5d12">Starten →</span></button>'+
+    '</div>'+
+    lzSheet(g)+
+    '<div class="eyebrow" style="margin:24px 0 12px;color:#1E7454">Übungen</div><div class="cards">'+cards+'</div>'+
+    '<div class="eyebrow" style="margin:30px 0 12px;color:#8a5d12">Lernkontrolle</div><div class="cards">'+
+      '<button class="card-topic" data-view="lernkontrolle" data-lkscope="'+keys.join(',')+'" style="--accent:#B0781B"><span class="k">Lernkontrolle</span>'+
+      '<span class="d">Zum Schluss: prüft, ob du alles kannst.</span>'+
+      '<span class="go" style="color:#8a5d12">Starten →</span></button>'+
+    '</div>'+
+  '</section>';
+}
+function buildAnleitungView(){
+  return '<section class="view" id="view-anleitung">'+
+    '<div class="eyebrow">Mathematik <span class="topic-tag">«Zahlen und Operationen»</span> · Hilfe</div>'+
+    '<h2 class="title">So funktioniert\'s</h2>'+
+    '<div class="sheet"><h3 style="font-family:var(--serif);margin:.3em 0 .2em;font-size:22px">Themenseiten</h3>'+
+    '<p style="color:var(--ink-soft);margin:0 0 16px;max-width:70ch">Klick links auf ein Teilthema (z.&nbsp;B. «'+G1+'») für dessen Startseite mit Lernstandsüberprüfung, Lernzielen und Übungen. Der kleine Pfeil daneben klappt die Übungsliste ein oder aus.</p>'+
+    '<h3 style="font-family:var(--serif);margin:.3em 0 .2em;font-size:22px">Lernziele</h3>'+
+    '<p style="color:var(--ink-soft);margin:0 0 16px;max-width:70ch">Abhaken, was du schon kannst. «Üben» führt direkt zur passenden Übung.</p>'+
+    '<h3 style="font-family:var(--serif);margin:.3em 0 .2em;font-size:22px">Üben &amp; Arbeitsblätter erstellen</h3>'+
+    '<p style="color:var(--ink-soft);margin:0 0 16px;max-width:70ch">Zwei Reiter pro Übung: <b>Üben</b> für beliebig viele Aufgaben mit Lösungsweg, <b>Arbeitsblatt erstellen</b> für ein PDF mit Lösungen.</p>'+
+    '<h3 style="font-family:var(--serif);margin:.3em 0 .2em;font-size:22px">Schwierigkeitsstufen</h3>'+
+    '<p style="color:var(--ink-soft);margin:0 0 16px;max-width:70ch"><b>Grundanforderungen</b> = Basis, <b>Erweitert</b> = darauf aufbauend, <b>Anspruchsvoll</b> = Niveau Kanti/BMS/WMS/FMS.</p>'+
+    '<h3 style="font-family:var(--serif);margin:.3em 0 .2em;font-size:22px">Lernstandsüberprüfung &amp; Lernkontrolle</h3>'+
+    '<p style="color:var(--ink-soft);margin:0;max-width:70ch">Gleiche Aufgabenserie, unterschiedlicher Zeitpunkt: <b>Lernstandsüberprüfung</b> vor dem Üben zeigt, was noch fehlt. <b>Lernkontrolle</b> nach dem Üben prüft, ob alles sitzt. Auf der Startseite deckt die Lernkontrolle alle Themen zusammen ab.</p></div>'+
   '</section>';
 }
 function buildTopicView(t){
@@ -3721,9 +3825,14 @@ const THEORIE={
 };
 function buildNav(){
   let html='<div class="nav-label">Start</div><button class="navbtn active" data-view="home"><span class="ico">▦</span> Übersicht</button>';
-  GROUPS.forEach(g=>{html+='<div class="nav-label">'+g+'</div>';
-    TOPICS.filter(t=>t.group===g).forEach(t=>{html+='<button class="navbtn" data-view="'+t.key+'"><span class="ico">›</span> '+t.nav+'</button>';});});
-  html+='<div class="nav-label">Lernkontrolle</div><button class="navbtn" data-view="lernkontrolle"><span class="ico">✎</span> Lernkontrolle</button>';
+  html+='<button class="navbtn" data-view="lernkontrolle" data-lkscope="ALL"><span class="ico">✎</span> Lernkontrolle</button>';
+  GROUPS.forEach(g=>{const gk=grpView(g);
+    html+='<div class="nav-row"><button class="nav-label nav-label-btn" data-view="'+gk+'">'+g+'</button>'+
+      '<button class="nav-chevron" data-toggle="'+gk+'" aria-label="Themenliste ein-/ausblenden">▸</button></div>';
+    html+='<div class="nav-sub" data-group="'+gk+'">'+
+      TOPICS.filter(t=>t.group===g).map(t=>'<button class="navbtn navbtn-sub" data-view="'+t.key+'"><span class="ico">›</span> '+t.nav+'</button>').join('')+
+    '</div>';});
+  html+='<div class="nav-label">Hilfe</div><button class="navbtn" data-view="anleitung"><span class="ico">?</span> So funktioniert\'s</button>';
   return html;
 }
 function mk2(w,h){const c=document.createElement('canvas');const dpr=2;c.width=w*dpr;c.height=h*dpr;c.style.width=w+'px';c.style.height=h+'px';const ctx=c.getContext('2d');ctx.scale(dpr,dpr);return {c,ctx};}
@@ -3744,26 +3853,36 @@ function buildLKView(){
   return '<section class="view" id="view-lernkontrolle">'+
    '<div class="eyebrow">Mathematik <span class="topic-tag">«Zahlen und Operationen»</span> · Lernkontrolle</div>'+
    '<h2 class="title">Lernkontrolle</h2>'+
-   '<p class="lead">Wähle die Themen und die Anzahl Aufgaben. Löse die Lernkontrolle online – die Auswertung mit Feedback folgt beim Abgeben – oder drucke sie mit Punkten und Lösungsblatt aus.</p>'+
+   '<p class="lead">Themen und Anzahl wählen – online lösen oder als PDF ausdrucken.</p>'+
    '<div id="lk-host"></div></section>';
 }
-function mountLK(){
+function goPractice(key){showView(key);const b=document.querySelector('#view-'+key+' .tab[data-panel="uebn"]');if(b)b.click();}
+let LK_SCOPE=null;
+function mountLKView(){
   const host=document.getElementById('lk-host');if(!host||typeof LK==='undefined')return;
+  host.innerHTML='';
   const API_KEY={bruchrechnen:'bruch',potberech:'pot',dezrechnen:'dez'};
-  function practice(v){return function(){showView(v);const b=document.querySelector('#view-'+v+' .tab[data-panel="uebn"]');if(b)b.click();};}
-  LK.mount(host,{subject:'Zahlen und Operationen',min:4,max:40,def:12,groups:GROUPS.map(g=>({title:g,
+  LK.mount(host,{subject:'Zahlen und Operationen',min:4,max:40,def:12,preselect:LK_SCOPE,groups:GROUPS.map(g=>({title:g,
     topics:TOPICS.filter(t=>t.group===g).map(t=>{const k=API_KEY[t.key]||t.key;
-      return {key:t.key,nav:t.nav,gen:d=>EXAM_API[k](d),practice:practice(t.key)};})}))});
+      return {key:t.key,nav:t.nav,gen:d=>EXAM_API[k](d),practice:()=>goPractice(t.key)};})}))});
+}
+function goToLK(scope){
+  LK_SCOPE=(!scope||scope==='ALL')?null:scope.split(',').filter(Boolean);
+  mountLKView();
+  showView('lernkontrolle');
 }
 
 function init(){
   $('#nav').innerHTML=buildNav();
-  $('#main').innerHTML=buildHome()+TOPICS.map(buildTopicView).join('')+buildLKView();
+  $('#main').innerHTML=buildHome()+GROUPS.map(buildGroupView).join('')+TOPICS.map(buildTopicView).join('')+buildLKView()+buildAnleitungView();
   $$('[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
+  $$('[data-practice]').forEach(b=>b.addEventListener('click',()=>goPractice(b.dataset.practice)));
+  $$('[data-lkscope]').forEach(b=>b.addEventListener('click',()=>goToLK(b.dataset.lkscope)));
+  $$('.nav-chevron').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();toggleNavGroup(b.dataset.toggle);}));
   $('#menuToggle').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
   wireTabs();
   TOPICS.forEach(t=>{mountPractice($('#'+t.key+'-uebn'),t.gen,{selector:t.selector,title:t.title});mountGenerator($('#'+t.key+'-gen'),t);});
-  mountLK();
+  mountLKView();
   renderIllus();
 }
 if(!(window.LVHOOK&&window.LVHOOK.blockInit()))init();
