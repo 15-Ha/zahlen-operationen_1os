@@ -2575,7 +2575,9 @@ function genDez(diff,op){
     const bMax=diff===1?10:diff===2?15:20;
     const aMax=diff===1?100:diff===2?250:500;
     const dbPool=diff===1?[1,2]:diff===2?[1,2,3]:[1,2,3];
-    const rqPool=diff===1?[1]:diff===2?[1,2]:[1,2];
+    /* Kommastellenzahl des Ergebnisses variieren (nicht nur 1 Kommastelle): Stufe 1 meist
+       1, gelegentlich 2 Kommastellen; Stufe 2/3 ausgewogen gemischt. */
+    const rqPool=diff===1?[1,1,2]:diff===2?[1,2]:[1,2];
     let bInt,db,rq,resInt,aInt,aShift,da,guard=0;
     do{
       bInt=ri(2,bMax);
@@ -2589,7 +2591,9 @@ function genDez(diff,op){
       aShift=aInt/Math.pow(10,rq);
       da=dp(a);
       guard++;
-    }while((da===0||da===db||aShift>aMax||aShift<1)&&guard<80);
+      // bInt%10===0 wuerde bei b=bInt/10^db eine Nachkommastelle "verschlucken"
+      // (z.B. bInt=10,db=1 -> b=1 statt einer echten Dezimalzahl) -- ausschliessen.
+    }while((da===0||da===db||aShift>aMax||aShift<1||bInt%10===0)&&guard<150);
     b=bInt/Math.pow(10,db);
     const ld=longDivision(aInt,bInt,rq);
     const grid=divRows(ld.steps);
