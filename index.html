@@ -2575,9 +2575,9 @@ function genDez(diff,op){
     const bMax=diff===1?10:diff===2?15:20;
     const aMax=diff===1?100:diff===2?250:500;
     const dbPool=diff===1?[1,2]:diff===2?[1,2,3]:[1,2,3];
-    /* Kommastellenzahl des Ergebnisses variieren (nicht nur 1 Kommastelle): Stufe 1 meist
-       1, gelegentlich 2 Kommastellen; Stufe 2/3 ausgewogen gemischt. */
-    const rqPool=diff===1?[1,1,2]:diff===2?[1,2]:[1,2];
+    /* Kommastellenzahl des Ergebnisses nach Schwierigkeitsstufe: Grundanforderungen 1-2,
+       Erweitert bis 4, Anspruchsvoll bis 5 Kommastellen. */
+    const rqPool=diff===1?[1,2]:diff===2?[1,2,3,4]:[1,2,3,4,5];
     let bInt,db,rq,resInt,aInt,aShift,da,guard=0;
     do{
       bInt=ri(2,bMax);
