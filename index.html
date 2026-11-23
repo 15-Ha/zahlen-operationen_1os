@@ -2434,12 +2434,116 @@ function mkDec(places,maxWhole,minWhole){
   let frac;do{frac=ri(1,f-1);}while(frac%10===0);
   return +(whole+frac/f).toFixed(places);
 }
+/* ---------- Schriftliche Rechenverfahren "Mit Dezimalzahlen rechnen" ----------
+   Bildet die im Unterricht gezeigten Lösungswege als echte schriftliche Rechnung ab
+   (nicht nur als Kurzformel): Kommas untereinander bei +/-, Teilprodukte bei ·,
+   Schritt-für-Schritt-Division bei :. Alle Zeilen sind mit Leerzeichen auf gleiche
+   Breite gebracht, damit sie sowohl im Lösungsblatt (Courier, siehe buildListPDF)
+   als auch im Übungsmodus (via nbspify) exakt untereinander stehen.
+   Dezimaltrennzeichen bleibt durchgehend der Punkt (Haus-Stil der App). */
+/* ---------- Schriftliche Rechenverfahren "Mit Dezimalzahlen rechnen" ----------
+   Bildet die im Unterricht gezeigten Lösungswege als echte schriftliche Rechnung ab
+   (nicht nur als Kurzformel): Kommas untereinander bei +/-, Teilprodukte bei ·,
+   Schritt-für-Schritt-Division bei :. Alle Zeilen sind mit Leerzeichen auf gleiche
+   Breite gebracht, damit sie sowohl im Lösungsblatt (Courier, siehe buildListPDF)
+   als auch im Übungsmodus (via nbspify) exakt untereinander stehen.
+   Dezimaltrennzeichen bleibt durchgehend der Punkt (Haus-Stil der App). Die allgemeine
+   Methodik (nummerierte Schritte) steht nur im Theorie-Bereich der App – die Lösungen
+   selbst zeigen nur den konkreten Rechenweg (Gitter + Resultat), keine Anleitung. */
+function dezPad(s,w){s=String(s);return s.length>=w?s:' '.repeat(w-s.length)+s;}
+function nbspify(s){return String(s).replace(/ /g,' ');}
+/* dezG() markiert eine Zeile als "Rechengitter" (schriftliche Rechnung): im Uebungsmodus
+   werden deren Leerzeichen zu nbsp, damit die monospace-Ausrichtung (.work) erhalten bleibt;
+   im PDF (Courier, siehe buildListPDF) bleiben normale Leerzeichen ohnehin exakt stehen. */
+function dezG(s){return {g:s};}
+/* lines: Mischung aus Klartext-Zeilen (String) und Rechengitter-Zeilen (dezG(...)), in der
+   gewuenschten Reihenfolge; finalLine ist die fett/rot hervorgehobene Ergebniszeile am Schluss. */
+function assembleDezSolution(lines,finalLine){
+  const raw=lines.map(l=>typeof l==='object'?l.g:l).concat([finalLine]);
+  const isGrid=lines.map(l=>typeof l==='object').concat([false]);
+  const htmlParts=raw.map((s,i)=>isGrid[i]?nbspify(s):s);
+  htmlParts[htmlParts.length-1]='<b>'+htmlParts[htmlParts.length-1]+'</b>';
+  return {solutionHTML:'<span class="work">'+htmlParts.join('<br>')+'</span>',pdfSol:raw};
+}
+/* Addition/Subtraktion: Kommas untereinander schreiben, fehlende Stellen mit Nullen auffüllen. */
+function addSubRows(a,b,sym,res,maxP){
+  function split(n){const s=n.toFixed(maxP);const i=s.indexOf('.');return i<0?[s,'']:[s.slice(0,i),s.slice(i+1)];}
+  const A=split(a),B=split(b),R=split(Math.abs(res));
+  const intW=Math.max(A[0].length,B[0].length,R[0].length);
+  function row(pair){return dezPad(pair[0],intW)+(maxP>0?'.'+pair[1]:'');}
+  const rowA='  '+row(A),rowB=sym+' '+row(B),rowR='  '+row(R);
+  const width=Math.max(rowA.length,rowB.length,rowR.length);
+  return [rowA,rowB,'-'.repeat(width),rowR];
+}
+/* Multiplikation: Kommas weglassen, dann schriftlich mit Teilprodukten multiplizieren.
+   Kopfzeile des Gitters zeigt "Multiplikator · Multiplikand" (kleinere Ziffernzahl zuerst). */
+function mulRows(aInt,bInt){
+  const sA=String(aInt),sB=String(bInt);
+  let multiplicand,multiplier;
+  if(sA.length<=sB.length){multiplicand=bInt;multiplier=aInt;}else{multiplicand=aInt;multiplier=bInt;}
+  const mdigits=String(multiplier).split('').reverse().map(Number);
+  const partialsAll=mdigits.map((d,i)=>d*multiplicand*Math.pow(10,i));
+  const total=partialsAll.reduce((s,x)=>s+x,0);
+  const partials=partialsAll.filter(x=>x!==0);
+  const header=multiplier+' · '+multiplicand;
+  const w=Math.max(String(total).length,header.length,...partials.map(p=>String(p).length))+2;
+  const rows=[dezPad(header,w)];
+  if(partials.length<=1){rows.push(dezPad(String(total),w));}
+  else{partials.forEach((p,i)=>rows.push(dezPad((i===0?'':'+ ')+p,w)));rows.push('-'.repeat(w));rows.push(dezPad(String(total),w));}
+  return {total,rows};
+}
+/* Division: Divisor/Dividend bereits ganzzahlig verschoben (aInt, bInt); rq = Anzahl
+   Nachkommastellen, die aInt gegenueber dem verschobenen Dividenden repraesentiert.
+   Fuehrt die schriftliche Division Stelle fuer Stelle durch (immer exakt, ohne Rest). */
+function longDivision(aInt,bInt,rq){
+  const intPart=Math.floor(aInt/Math.pow(10,rq));
+  const fracStr=String(aInt%Math.pow(10,rq)).padStart(rq,'0');
+  const intStr=String(intPart);
+  const digits=(intStr+fracStr).split('').map(Number);
+  const crossIndex=intStr.length;
+  let i=0,remainder=0,started=false,guard=0;
+  let quotientDigits=[],decimalInQuotientAt=null;
+  const steps=[];
+  while(guard++<80){
+    if(i>=digits.length){if(remainder===0)break;digits.push(0);}
+    if(i===crossIndex&&decimalInQuotientAt===null){decimalInQuotientAt=quotientDigits.length;started=true;}
+    const d=digits[i];
+    const bring=remainder*10+d;
+    const qd=Math.floor(bring/bInt);
+    const prod=qd*bInt;
+    const rem=bring-prod;
+    if(qd>0)started=true;
+    if(started){quotientDigits.push(qd);steps.push({bring,prod,rem});}
+    remainder=rem;i++;
+    if(i>=digits.length&&remainder===0)break;
+  }
+  if(quotientDigits.length===0)quotientDigits=[0];
+  let qStr;
+  if(decimalInQuotientAt===null||decimalInQuotientAt>=quotientDigits.length)qStr=quotientDigits.join('');
+  else if(decimalInQuotientAt<=0)qStr='0.'+quotientDigits.join('');
+  else qStr=quotientDigits.slice(0,decimalInQuotientAt).join('')+'.'+quotientDigits.slice(decimalInQuotientAt).join('');
+  return {quotientStr:qStr,steps};
+}
+/* Gitter-Zeilen zur Division: der erste "Bring-down"-Wert steht bereits sichtbar in der
+   Kopfzeile (Dividend) und wird darum NICHT nochmals hingeschrieben. Ab dem zweiten
+   Schritt wird der neue, aus Rest+heruntergeholter Ziffer gebildete Wert explizit notiert. */
+function divRows(steps){
+  const width=Math.max.apply(null,steps.reduce((a,s)=>a.concat([String(s.bring).length,String(s.prod).length,String(s.rem).length]),[]));
+  const rows=[];
+  steps.forEach((s,idx)=>{
+    if(idx>0)rows.push(dezPad(String(s.bring),width));
+    rows.push(dezPad(String(s.prod),width));
+    rows.push('-'.repeat(width));
+    if(idx===steps.length-1)rows.push(dezPad(String(s.rem),width));
+  });
+  return rows;
+}
 function genDez(diff,op){
   const OPS={add:'+',sub:'−',mul:'·',div:':'};
   const ops=(Array.isArray(op)?op:[op]).filter(function(x){return OPS[x];});
   const key=ops.length?pick(ops):pick(['add','sub','mul','div']);
   const sym=OPS[key];
-  let a,b,res,steps;
+  let a,b,res,sol;
   if(key==='add'||key==='sub'){
     /* a und b haben GARANTIERT unterschiedlich viele Nachkommastellen (z. B. 3.5 + 1.25). */
     const pool=diff===1?[1,2]:diff===2?[1,2,3]:[1,2,3];
@@ -2449,8 +2553,8 @@ function genDez(diff,op){
     if(key==='sub'&&b>a){const t=a;a=b;b=t;}
     res=+((key==='add'?a+b:a-b)).toFixed(Math.max(pa,pb));
     const maxP=Math.max(dp(a),dp(b),dp(res));
-    steps=['Kommas untereinander schreiben (bei Bedarf mit Nullen auffüllen), dann wie gewohnt rechnen.',
-      a.toFixed(maxP)+' '+sym+' '+b.toFixed(maxP)+' = '+res.toFixed(maxP)];
+    const grid=addSubRows(a,b,sym,res,maxP);
+    sol=assembleDezSolution(grid.map(dezG), fmtCH(a)+' '+sym+' '+fmtCH(b)+' = '+fmtCH(res));
   }else if(key==='mul'){
     /* beide Faktoren sind echte Dezimalzahlen mit UNTERSCHIEDLICH vielen Nachkommastellen. */
     const pool=diff===1?[1,2]:diff===2?[1,2,3]:[1,2,3];
@@ -2458,44 +2562,39 @@ function genDez(diff,op){
     let pa=pick(pool),pb;do{pb=pick(pool);}while(pb===pa);
     a=mkDec(pa,maxWhole,0);b=mkDec(pb,maxWhole,0);
     const da=dp(a),db2=dp(b),tot=da+db2;
-    const aInt=Math.round(a*Math.pow(10,da)),bInt=Math.round(b*Math.pow(10,db2)),prodInt=aInt*bInt;
-    res=prodInt/Math.pow(10,tot);
-    steps=['Ohne Komma rechnen: '+aInt+' · '+bInt+' = '+prodInt,
-      'Nachkommastellen zählen: '+da+' + '+db2+' = '+tot,
-      'Komma setzen: '+fmtCH(a)+' · '+fmtCH(b)+' = '+fmtCH(res)];
+    const aInt=Math.round(a*Math.pow(10,da)),bInt=Math.round(b*Math.pow(10,db2));
+    const md=mulRows(aInt,bInt);
+    res=md.total/Math.pow(10,tot);
+    sol=assembleDezSolution(md.rows.map(dezG), fmtCH(a)+' · '+fmtCH(b)+' = '+fmtCH(res));
   }else{
-    /* Dividend UND Divisor sind beide echte Dezimalzahlen (dp>=1) mit UNTERSCHIEDLICH vielen
-       Nachkommastellen (z. B. 6.4 : 0.08). Der Quotient wird exakt (ohne Rundungsfehler) konstruiert:
-       a = res · b, mit res als "handliche" Zahl – so bleibt die schriftliche Division immer glatt. */
-    const dbPool=diff===1?[1,2]:diff===2?[1,2,3]:[1,2,3];
-    const bWhole=diff===1?0:diff===2?ri(0,1):ri(0,4);
+    /* KOPFRECHEN-TAUGLICHE DIVISION: Divisor ist eine natuerliche Zahl bis 20 (wie beim
+       grossen Einmaleins), der Dividend (eine Dezimalzahl) bleibt im Zahlenraum bis 500.
+       Der Quotient wird exakt konstruiert (res · b = a) – keine schriftliche Division
+       noetig, loesbar ueber bekannte Einmaleinssaetze bzw. Ueberschlag im Kopf. */
+    const bMax=diff===1?10:diff===2?15:20;
+    const aMax=diff===1?100:diff===2?250:500;
     const rqPool=diff===1?[1]:diff===2?[1,2]:[1,2];
-    const resMax=diff===1?20:diff===2?40:80;
-    let db,bInt,rq,resInt,aInt,da,guard=0;
+    let rq,resInt,da,guard=0;
     do{
-      db=pick(dbPool);
-      const bb=mkDec(db,bWhole,0);
-      bInt=Math.round(bb*Math.pow(10,db));
-      b=bb;
+      b=ri(2,bMax);
       rq=pick(rqPool);
-      resInt=ri(1,resMax);
+      const resMax=Math.floor(aMax*Math.pow(10,rq)/b);
+      resInt=ri(1,Math.max(1,resMax));
       res=resInt/Math.pow(10,rq);
-      aInt=resInt*bInt;
-      a=aInt/Math.pow(10,rq+db);
+      a=+(res*b).toFixed(rq);
       da=dp(a);
       guard++;
-    }while((da===0||da===db)&&guard<60);
-    const shift=Math.pow(10,db),aShift=+(a*shift).toFixed(6);
-    steps=['Komma beim Divisor um '+db+' Stelle'+(db===1?'':'n')+' nach rechts verschieben, damit er eine ganze Zahl wird: '+fmtCH(b)+' → '+bInt,
-      'Komma beim Dividenden um gleich viele Stellen verschieben: '+fmtCH(a)+' → '+fmtCH(aShift),
-      'Normal dividieren: '+fmtCH(aShift)+' : '+bInt+' = '+fmtCH(res)];
+    }while((da===0||a>aMax||a<1)&&guard<80);
+    const bInt=b,aInt=Math.round(a*Math.pow(10,rq));
+    const ld=longDivision(aInt,bInt,rq);
+    const grid=divRows(ld.steps);
+    sol=assembleDezSolution(grid.map(dezG), fmtCH(a)+' '+sym+' '+fmtCH(b)+' = '+fmtCH(res));
   }
   const expr=fmtCH(a)+' '+sym+' '+fmtCH(b);
-  const sol=steps.join('<br>');
   return {answerType:'text',promptHTML:'<span class="big">'+expr+' =</span>',placeholder:'Ergebnis',inputMode:'decimal',
     accept:function(v){return Math.abs(parseNum(v)-res)<0.0005;},
-    solutionHTML:'<span class="work">'+sol+'</span>',
-    pdfQ:expr+' =',pdfSol:steps};
+    solutionHTML:sol.solutionHTML,
+    pdfQ:expr+' =',pdfSol:sol.pdfSol};
 }
 /*SHARED-END*/
 /*EXAMAPI-START*/
@@ -3841,7 +3940,7 @@ const THEORIE={
  groedez:()=>'<p>Einen <b>Bruchteil einer Grösse</b> berechnet man, indem man den Bruch mit der Grösse multipliziert.</p><div class="bsp">'+fr(3,4)+' kg = '+fr(3,4)+' von 1000 g = 750 g</div><p><b>Bruch ↔ Dezimalzahl:</b> Den Bruch als Division lesen bzw. die Dezimalzahl als Bruch schreiben und kürzen.</p><div class="bsp">'+fr(3,4)+' = 0.75 &nbsp;&nbsp; 0.2 = '+fr(1,5)+'</div>',
  zstrahl:()=>'<p>Auf dem <b>Zahlenstrahl</b> gilt: je weiter <b>rechts</b>, desto <b>grösser</b> die Zahl.</p><div class="merke"><b>Vergleichen:</b> Zuerst die Stellen nach dem Komma gleich lang auffüllen, dann Ziffer für Ziffer vergleichen. So ist 0.7 = 0.70, also 0.70 &gt; 0.68.</div><div class="bsp"><span class="lbl">Aufsteigend ordnen</span>0.38 &lt; 0.4 &lt; 0.409 &lt; 0.5</div><div class="illu" data-draw="numberline"></div>',
  stellenwert:()=>'<p>In der <b>Stellenwerttafel</b> hat jede Stelle einen festen Wert. Nach links wird jede Stelle zehnmal grösser, nach rechts zehnmal kleiner.</p><div class="bsp"><span class="lbl">Stellen</span>H&nbsp;Z&nbsp;E , z&nbsp;h&nbsp;t &nbsp;=&nbsp; Hunderter, Zehner, Einer , Zehntel, Hundertstel, Tausendstel</div><div class="bsp"><span class="lbl">Beispiel</span>3.47 = 3 Einer, 4 Zehntel, 7 Hundertstel</div><div class="illu" data-draw="pvt:3.47"></div>',
- dezrechnen:()=>'<h4>Addieren & Subtrahieren</h4><p>Die <b>Kommas</b> genau untereinander schreiben (gleiche Stellen unter gleiche Stellen; bei Bedarf mit Nullen auffüllen), dann wie gewohnt spaltenweise rechnen.</p><div class="bsp">2.50 + 1.30 = 3.80</div><h4>Multiplizieren</h4><p>Drei Schritte: 1. Ohne Komma rechnen (wie ganze Zahlen). 2. Die Nachkommastellen beider Faktoren zusammenzählen. 3. Im Ergebnis so viele Nachkommastellen abzählen und das Komma setzen.</p><div class="bsp">0.3 · 0.4 = 3 · 4 = 12 &nbsp;→&nbsp; 1 + 1 = 2 Nachkommastellen &nbsp;→&nbsp; 0.12</div><h4>Dividieren</h4><p>Das Komma beim Divisor so verschieben, dass er eine ganze Zahl wird – das Komma beim Dividenden um gleich viele Stellen mitverschieben. Dann wie gewohnt dividieren.</p><div class="bsp">6.4 : 0.8 = 64 : 8 = 8</div><div class="merke"><b>Merke:</b> Bei + und − müssen die Kommas übereinander stehen. Bei · und : wird zuerst ohne Komma gerechnet – das Komma kommt erst am Schluss.</div>'
+ dezrechnen:()=>'<h4>Addition und Subtraktion</h4><ul><li>1. Kommas untereinander schreiben.</li><li>2. Fehlende Kommastellen mit Nullen auffüllen.</li><li>3. Schriftlich rechnen.</li></ul><div class="bsp">3.45 + 2.7 = 6.15<br>2.345 + 4.71 = 7.055</div><h4>Multiplikation</h4><ul><li>1. Kommas weglassen.</li><li>2. Ohne Kommas (schriftlich) multiplizieren.</li><li>3. Ursprüngliche Kommastellen zählen.</li><li>4. Komma setzen (gezählte Stellen).</li></ul><div class="bsp">1.25 · 3.4 &nbsp;→&nbsp; ohne Komma: 125 · 34 = 4250 &nbsp;→&nbsp; 2 + 1 = 3 Nachkommastellen &nbsp;→&nbsp; 1.25 · 3.4 = 4.25</div><h4>Division</h4><ul><li>1. Divisor ganzzahlig machen → Komma um x Stellen verschieben.</li><li>2. Dividend: Komma um gleich viele Stellen verschieben.</li><li>3. Schriftlich ausrechnen. <span class="hintdim">Wenn beim Dividenden das Komma kommt, muss man dieses auch im Resultat setzen.</span></li></ul><div class="bsp">3.96 : 1.8 = 39.6 : 18 = 2.2<br>1.4 : 0.25 = 140 : 25 = 5.6</div><div class="merke"><b>Merke:</b> Bei + und − müssen die Kommas übereinander stehen. Bei · und : wird zuerst ohne Komma gerechnet – das Komma kommt erst am Schluss.</div>'
 };
 function buildNav(){
   let html='<div class="nav-label">Start</div><button class="navbtn active" data-view="home"><span class="ico">▦</span> Übersicht</button>';
