@@ -2567,28 +2567,38 @@ function genDez(diff,op){
     res=md.total/Math.pow(10,tot);
     sol=assembleDezSolution(md.rows.map(dezG), fmtCH(a)+' · '+fmtCH(b)+' = '+fmtCH(res));
   }else{
-    /* KOPFRECHEN-TAUGLICHE DIVISION: Divisor ist eine natuerliche Zahl bis 20 (wie beim
-       grossen Einmaleins), der Dividend (eine Dezimalzahl) bleibt im Zahlenraum bis 500.
-       Der Quotient wird exakt konstruiert (res · b = a) – keine schriftliche Division
-       noetig, loesbar ueber bekannte Einmaleinssaetze bzw. Ueberschlag im Kopf. */
+    /* Dividend UND Divisor sind beide echte Dezimalzahlen (dp>=1) mit UNTERSCHIEDLICH vielen
+       Nachkommastellen (z. B. 8.52 : 0.6). Nach dem Verschieben des Kommas (Divisor ganzzahlig
+       machen) bleibt die eigentliche schriftliche Rechnung (aShift : bInt) im Kopfrechenbereich:
+       Divisor (nach Verschiebung) bis 20, Dividend (nach Verschiebung) bis 500 – genau die
+       Rechnung, die am Ende schriftlich ausgefuehrt wird. */
     const bMax=diff===1?10:diff===2?15:20;
     const aMax=diff===1?100:diff===2?250:500;
+    const dbPool=diff===1?[1,2]:diff===2?[1,2,3]:[1,2,3];
     const rqPool=diff===1?[1]:diff===2?[1,2]:[1,2];
-    let rq,resInt,da,guard=0;
+    let bInt,db,rq,resInt,aInt,aShift,da,guard=0;
     do{
-      b=ri(2,bMax);
+      bInt=ri(2,bMax);
+      db=pick(dbPool);
       rq=pick(rqPool);
-      const resMax=Math.floor(aMax*Math.pow(10,rq)/b);
+      const resMax=Math.floor(aMax*Math.pow(10,rq)/bInt);
       resInt=ri(1,Math.max(1,resMax));
       res=resInt/Math.pow(10,rq);
-      a=+(res*b).toFixed(rq);
+      aInt=resInt*bInt;
+      a=aInt/Math.pow(10,rq+db);
+      aShift=aInt/Math.pow(10,rq);
       da=dp(a);
       guard++;
-    }while((da===0||a>aMax||a<1)&&guard<80);
-    const bInt=b,aInt=Math.round(a*Math.pow(10,rq));
+    }while((da===0||da===db||aShift>aMax||aShift<1)&&guard<80);
+    b=bInt/Math.pow(10,db);
     const ld=longDivision(aInt,bInt,rq);
     const grid=divRows(ld.steps);
-    sol=assembleDezSolution(grid.map(dezG), fmtCH(a)+' '+sym+' '+fmtCH(b)+' = '+fmtCH(res));
+    sol=assembleDezSolution([
+      fmtCH(b)+' → '+bInt,
+      fmtCH(a)+' → '+fmtCH(aShift),
+      fmtCH(aShift)+' : '+bInt+' = '+fmtCH(res),
+      ...grid.map(dezG)
+    ], fmtCH(a)+' '+sym+' '+fmtCH(b)+' = '+fmtCH(res));
   }
   const expr=fmtCH(a)+' '+sym+' '+fmtCH(b);
   return {answerType:'text',promptHTML:'<span class="big">'+expr+' =</span>',placeholder:'Ergebnis',inputMode:'decimal',
